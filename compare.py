@@ -1,42 +1,20 @@
 import cv2
 import numpy as np
-import os
-from skimage.feature import hog
-from sklearn.metrics.pairwise import cosine_similarity
+from skimage.metrics import structural_similarity as ssim
+from PIL import Image
 
-def extract_hog_features(image_path):
-    image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-    resized_img = cv2.resize(image, (128, 128))
-    features, _ = hog(resized_img, orientations=9, pixels_per_cell=(8,8),
-                      cells_per_block=(2,2), visualize=True)
-    return features
+def compare_handwriting(img1, img2):
+    if isinstance(img1, Image.Image):  # Convert PIL image to NumPy array
+        img1 = np.array(img1)
+    if isinstance(img2, Image.Image):
+        img2 = np.array(img2)
 
-def compare_handwriting(folder_path="dataset/"):
-    main_image_path = os.path.join(folder_path, "main_handwriting.jpg")
+    img1_gray = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
+    img2_gray = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
 
-    if not os.path.exists(main_image_path):
-        return "⚠️ Main handwriting image not found! Please capture it first."
+    # Resize images to the same shape
+    img2_gray = cv2.resize(img2_gray, (img1_gray.shape[1], img1_gray.shape[0]))
 
-    main_features = extract_hog_features(main_image_path)
-    images = sorted([f for f in os.listdir(folder_path) if f.startswith("compare_")])
-    
-    results = []
-    for img in images:
-        img_path = os.path.join(folder_path, img)
-        img_features = extract_hog_features(img_path)
-        
-        similarity = cosine_similarity([main_features], [img_features])[0][0] * 100
-        results.append({
-            "image": img,
-            "similarity": round(similarity, 2),
-        })
+    similarity_score = ssim(img1_gray, img2_gray)
 
-    return results
-
-def clear_dataset(folder_path="dataset/"):
-    """Deletes all handwriting images in the dataset folder."""
-    if os.path.exists(folder_path):
-        for file in os.listdir(folder_path):
-            os.remove(os.path.join(folder_path, file))
-        return "Dataset cleared successfully!"
-    return "No images found to clear."
+    return round(similarity_score * 100, 2)  # Convert to percentage
