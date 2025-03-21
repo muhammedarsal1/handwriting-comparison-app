@@ -1,24 +1,16 @@
 import cv2
 import numpy as np
+from skimage.metrics import structural_similarity as ssim
+from PIL import Image
 
-def capture_handwriting():
-    cap = cv2.VideoCapture(0)  # Open webcam
+def compare_handwriting(img1, img2):
+    # Convert PIL images to NumPy arrays
+    img1 = np.array(img1.convert("L"))
+    img2 = np.array(img2.convert("L"))
 
-    if not cap.isOpened():
-        print("❌ Error: Could not open webcam")
-        return None
+    # Resize images to the same shape
+    img2 = cv2.resize(img2, (img1.shape[1], img1.shape[0]))
 
-    while True:
-        ret, frame = cap.read()
-        if not ret or frame is None:
-            print("⚠️ Failed to capture image! Try again.")
-            continue
+    similarity_score = ssim(img1, img2)
 
-        cv2.imshow("Capture Handwriting", frame)
-        key = cv2.waitKey(1) & 0xFF
-        if key == ord('s'):  # Press 's' to capture image
-            break
-
-    cap.release()
-    cv2.destroyAllWindows()
-    return frame  # Return captured image
+    return round(similarity_score * 100, 2)  # Convert to percentage
